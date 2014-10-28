@@ -37,10 +37,7 @@ function copyAllowedKeys(allowed, source, destination) {
 function RedisPool(redisOptions, poolOptions) {
     var self = this;
     self._pool = null;
-    self._redis_host = redisOptions.host || null;
-    self._redis_port = redisOptions.port || null;
-    self._redis_unix_socket = redisOptions.unix_socket || null;
-    self._redis_options = copyAllowedKeys(SUPPORTED_REDIS_OPTIONS, redisOptions, {});
+    self._redis_options = redisOptions;
     self._pool_options = copyAllowedKeys(SUPPORTED_POOL_OPTIONS, poolOptions, {});
 }
 util.inherits(RedisPool, EventEmitter);
@@ -53,14 +50,8 @@ RedisPool.prototype._initialize = function _initialize() {
 
     // Build new Redis database clients.
     poolSettings["create"] = function Create(cb) {
-        var client = null;
 
-        // Detect if application wants to use Unix sockets or TCP connections.
-        if (self._redis_unix_socket != null) {
-            client = redis.createClient(self._redis_unix_socket, null, self._redis_options);
-        } else {
-            client = redis.createClient(self._redis_port, self._redis_host, self._redis_options);
-        }
+        var client = redis.createClient(self._redis_options);
 
         // Handle client connection errors.
         client.on("error", clientErrorCallback);
@@ -80,7 +71,7 @@ RedisPool.prototype._initialize = function _initialize() {
 
     // The destroy function is called when client connection needs to be closed.
     poolSettings["destroy"] = function destroyClient(client) {
-        client.end();
+        client.disconnect();
         self.emit("destroy", null);
     }
 
