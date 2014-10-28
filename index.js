@@ -2,10 +2,10 @@
  * Module dependencies.
  */
 
-var EventEmitter = require('events').EventEmitter
-  , util = require('util')
-  , Pool = require('generic-pool').Pool
-  , redis = require('redis');
+var EventEmitter = require('events').EventEmitter,
+    util = require('util'),
+    Pool = require('generic-pool').Pool,
+    redis = require('then-redis');
 
 var SUPPORTED_REDIS_OPTIONS = [
     "parser", "return_buffers", "detect_buffers", "socket_nodelay",
@@ -16,17 +16,17 @@ var SUPPORTED_REDIS_OPTIONS = [
 
 var SUPPORTED_POOL_OPTIONS = [
     "name", "max", "min", "refreshIdle", "idleTimeoutMillis",
-    "reapIntervalMillis", "returnToHead","priorityRange"
+    "reapIntervalMillis", "returnToHead", "priorityRange"
 ];
 
 function isFunction(functionToCheck) {
- var getType = {};
- return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
+    var getType = {};
+    return functionToCheck && getType.toString.call(functionToCheck) === '[object Function]';
 }
 
 function copyAllowedKeys(allowed, source, destination) {
     function copyAllowedKey(key) {
-        if(key in source) {
+        if (key in source) {
             destination[key] = source[key];
         }
     }
@@ -50,7 +50,7 @@ RedisPool.prototype._initialize = function _initialize() {
     var self = this;
     var redisSettings = self._redis_options;
     var poolSettings = self._pool_options;
-    
+
     // Build new Redis database clients.
     poolSettings["create"] = function Create(cb) {
         var client = null;
@@ -59,12 +59,12 @@ RedisPool.prototype._initialize = function _initialize() {
         if (self._redis_unix_socket != null) {
             client = redis.createClient(self._redis_unix_socket, null, self._redis_options);
         } else {
-            client = redis.createClient(self._redis_port, self._redis_host, self._redis_options);    
+            client = redis.createClient(self._redis_port, self._redis_host, self._redis_options);
         }
-        
+
         // Handle client connection errors.
         client.on("error", clientErrorCallback);
-        
+
         function clientErrorCallback(err) {
             // Emit client connection errors to connection pool users.
             self.emit("error", err);
@@ -74,16 +74,16 @@ RedisPool.prototype._initialize = function _initialize() {
         if (redisSettings.auth_pass) {
             client.auth(redisSettings.auth_pass);
         }
-        
+
         cb(null, client);
     }
-    
+
     // The destroy function is called when client connection needs to be closed.
     poolSettings["destroy"] = function destroyClient(client) {
         client.end();
         self.emit("destroy", null);
     }
-    
+
     // Now that the pool settings are ready create a pool instance.
     self._pool = Pool(poolSettings);
     return this;
@@ -95,7 +95,7 @@ RedisPool.prototype.acquire = function acquireClient(cb, priority) {
 }
 // Release a database connection to the pool.
 RedisPool.prototype.release = function releaseClient(client) {
-     this._pool.release(client);
+    this._pool.release(client);
 }
 
 // Drains the connection pool and call the callback id provided.
@@ -104,19 +104,19 @@ RedisPool.prototype.drain = function drainRedisPool(cb) {
     self._pool.drain(function() {
         self._pool.destroyAllNow();
         if (isFunction(cb)) {
-            cb();    
+            cb();
         }
     });
 }
 
 // Returns factory.name for this pool
-RedisPool.prototype.getName = function getName(){
+RedisPool.prototype.getName = function getName() {
     return this._pool.getName();
 }
 
 // Returns number of resources in the pool regardless of
 // whether they are free or in use
-RedisPool.prototype.getPoolSize = function getPoolSize(){
+RedisPool.prototype.getPoolSize = function getPoolSize() {
     return this._pool.getPoolSize();
 }
 
@@ -127,7 +127,7 @@ RedisPool.prototype.availableObjectsCount = function availableObjectsCount() {
 
 // Returns number of callers waiting to acquire a resource
 RedisPool.prototype.waitingClientsCount = function waitingClientsCount() {
-    return this._pool.waitingClientsCount();    
+    return this._pool.waitingClientsCount();
 }
 
 // Export this module.
